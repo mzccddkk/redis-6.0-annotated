@@ -33,41 +33,50 @@
 
 /* Node, List, and Iterator are the only data structures used currently. */
 
+/**
+ * 双向链表节点
+ */
 typedef struct listNode {
-    struct listNode *prev;
-    struct listNode *next;
-    void *value;
+    struct listNode *prev; // 前驱节点
+    struct listNode *next; // 后继节点
+    void *value; // 节点的值
 } listNode;
 
+/**
+ * 双向链表迭代器
+ */
 typedef struct listIter {
-    listNode *next;
-    int direction;
+    listNode *next; // 当前迭代到的节点
+    int direction; // 迭代方向
 } listIter;
 
+/**
+ * 双向链表结构
+ */
 typedef struct list {
-    listNode *head;
-    listNode *tail;
-    void *(*dup)(void *ptr);
-    void (*free)(void *ptr);
-    int (*match)(void *ptr, void *key);
-    unsigned long len;
+    listNode *head; // 头节点
+    listNode *tail; // 尾节点
+    void *(*dup)(void *ptr); // 节点值复制函数
+    void (*free)(void *ptr); // 节点值释放函数
+    int (*match)(void *ptr, void *key); // 节点值对比函数
+    unsigned long len; // 节点数量
 } list;
 
 /* Functions implemented as macros */
-#define listLength(l) ((l)->len)
-#define listFirst(l) ((l)->head)
-#define listLast(l) ((l)->tail)
-#define listPrevNode(n) ((n)->prev)
-#define listNextNode(n) ((n)->next)
-#define listNodeValue(n) ((n)->value)
+#define listLength(l) ((l)->len) // 链表包含的节点数量
+#define listFirst(l) ((l)->head) // 链表的头节点
+#define listLast(l) ((l)->tail) // 链表的尾节点
+#define listPrevNode(n) ((n)->prev) // 链表的前驱节点
+#define listNextNode(n) ((n)->next) // 链表的后继节点
+#define listNodeValue(n) ((n)->value) // 链表的节点值
 
-#define listSetDupMethod(l,m) ((l)->dup = (m))
-#define listSetFreeMethod(l,m) ((l)->free = (m))
-#define listSetMatchMethod(l,m) ((l)->match = (m))
+#define listSetDupMethod(l,m) ((l)->dup = (m)) // 将链表节点值的复制函数设置为 m
+#define listSetFreeMethod(l,m) ((l)->free = (m)) // 将链表节点值的释放函数设置为 m
+#define listSetMatchMethod(l,m) ((l)->match = (m)) // 将链表节点值的对比函数设置为 m
 
-#define listGetDupMethod(l) ((l)->dup)
-#define listGetFreeMethod(l) ((l)->free)
-#define listGetMatchMethod(l) ((l)->match)
+#define listGetDupMethod(l) ((l)->dup) // 获取链表节点值的复制函数
+#define listGetFreeMethod(l) ((l)->free) // 获取链表节点值的释放函数
+#define listGetMatchMethod(l) ((l)->match) // 获取链表节点值的对比函数
 
 /* Prototypes */
 list *listCreate(void);
@@ -90,7 +99,7 @@ void listRotateHeadToTail(list *list);
 void listJoin(list *l, list *o);
 
 /* Directions for iterators */
-#define AL_START_HEAD 0
-#define AL_START_TAIL 1
+#define AL_START_HEAD 0 // 从头节点向尾节点方向迭代
+#define AL_START_TAIL 1 // 从尾节点向头节点方向迭代
 
 #endif /* __ADLIST_H__ */
