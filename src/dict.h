@@ -47,52 +47,84 @@
 /* Unused arguments generate annoying warnings... */
 #define DICT_NOTUSED(V) ((void) V)
 
+/**
+ * 哈希表节点
+ */
 typedef struct dictEntry {
-    void *key;
-    union {
+    void *key; // 键
+    union { // 值
         void *val;
         uint64_t u64;
         int64_t s64;
         double d;
     } v;
-    struct dictEntry *next;
+    struct dictEntry *next; // 指向下个哈希表节点，解决键冲突问题
 } dictEntry;
 
+/**
+ * 字典类型函数
+ */
 typedef struct dictType {
+    // 计算哈希值的函数
     uint64_t (*hashFunction)(const void *key);
+
+    // 复制键的函数
     void *(*keyDup)(void *privdata, const void *key);
+
+    // 复制值的函数
     void *(*valDup)(void *privdata, const void *obj);
+
+    // 对比键的函数
     int (*keyCompare)(void *privdata, const void *key1, const void *key2);
+
+    // 销毁键的函数
     void (*keyDestructor)(void *privdata, void *key);
+
+    // 销毁值的函数
     void (*valDestructor)(void *privdata, void *obj);
 } dictType;
 
+/**
+ * 哈希表结构
+ * 
+ * 每个字典使用两个哈希表，实现渐进式 rehash
+ */
 /* This is our hash table structure. Every dictionary has two of this as we
  * implement incremental rehashing, for the old to the new table. */
 typedef struct dictht {
-    dictEntry **table;
-    unsigned long size;
-    unsigned long sizemask;
-    unsigned long used;
+    dictEntry **table; // 哈希表数组
+    unsigned long size; // 哈希表大小，即 table 数组的大小
+    unsigned long sizemask; // 哈希表大小掩码，用于计算索引值，总是等于 size-1
+    unsigned long used; // 哈希表已有节点数量
 } dictht;
 
+/**
+ * 字典结构
+ */
 typedef struct dict {
-    dictType *type;
-    void *privdata;
-    dictht ht[2];
+    dictType *type; // 字典类型特定函数
+    void *privdata; // 私有数据
+    dictht ht[2]; // 哈希表
+
+    // rehash 索引，等于 -1 时，没有进行 rehash
     long rehashidx; /* rehashing not in progress if rehashidx == -1 */
+
+    // 当前运行的迭代器数量
     unsigned long iterators; /* number of iterators currently running */
 } dict;
 
+/**
+ * 字典迭代器
+ */
 /* If safe is set to 1 this is a safe iterator, that means, you can call
  * dictAdd, dictFind, and other functions against the dictionary even while
  * iterating. Otherwise it is a non safe iterator, and only dictNext()
  * should be called while iterating. */
 typedef struct dictIterator {
-    dict *d;
-    long index;
-    int table, safe;
-    dictEntry *entry, *nextEntry;
+    dict *d; // 被迭代的字典
+    long index; // 迭代器当前所指向的哈希表索引位置
+    int table, safe; // table 正在被迭代的哈希表。safe 标记迭代器是否安全
+    dictEntry *entry, *nextEntry; // entry 当前迭代到的节点的指针。nextEntry 当前迭代节点的下一个节点
     /* unsafe iterator fingerprint for misuse detection. */
     long long fingerprint;
 } dictIterator;
