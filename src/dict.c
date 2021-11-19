@@ -59,7 +59,9 @@
  * Note that even when dict_can_resize is set to 0, not all resizes are
  * prevented: a hash table is still allowed to grow if the ratio between
  * the number of elements and the buckets > dict_force_resize_ratio. */
+// 字典是否 rehash 标记
 static int dict_can_resize = 1;
+// 强制 rehash 的比率（ht.used/ht.size）
 static unsigned int dict_force_resize_ratio = 5;
 
 /* -------------------------- private prototypes ---------------------------- */
@@ -97,6 +99,11 @@ uint64_t dictGenCaseHashFunction(const unsigned char *buf, int len) {
 
 /* ----------------------------- API implementation ------------------------- */
 
+/**
+ * 重置哈希表
+ * 
+ * T = O(1)
+ */
 /* Reset a hash table already initialized with ht_init().
  * NOTE: This function should only be called by ht_destroy(). */
 static void _dictReset(dictht *ht)
@@ -107,6 +114,11 @@ static void _dictReset(dictht *ht)
     ht->used = 0;
 }
 
+/**
+ * 创建一个新的字典
+ * 
+ * T = O(1)
+ */
 /* Create a new hash table */
 dict *dictCreate(dictType *type,
         void *privDataPtr)
@@ -117,12 +129,20 @@ dict *dictCreate(dictType *type,
     return d;
 }
 
+/**
+ * 初始化字典
+ * 
+ * T = O(1)
+ */
 /* Initialize the hash table */
 int _dictInit(dict *d, dictType *type,
         void *privDataPtr)
 {
+    // 里面包含两个哈希表
     _dictReset(&d->ht[0]);
     _dictReset(&d->ht[1]);
+
+    // 字典的各个属性
     d->type = type;
     d->privdata = privDataPtr;
     d->rehashidx = -1;
@@ -130,39 +150,59 @@ int _dictInit(dict *d, dictType *type,
     return DICT_OK;
 }
 
+/**
+ * 调整给定哈希表大小
+ * 
+ * T = O(n)
+ */
 /* Resize the table to the minimal size that contains all the elements,
  * but with the invariant of a USED/BUCKETS ratio near to <= 1 */
 int dictResize(dict *d)
 {
     unsigned long minimal;
 
+    // 如果没有开启 rehash 或者正在 rehash，返回
     if (!dict_can_resize || dictIsRehashing(d)) return DICT_ERR;
+
+    // 最小的 size 等于 0 号哈希表已有节点数量
     minimal = d->ht[0].used;
+    // 最小等于每个哈希表的初始化大小
     if (minimal < DICT_HT_INITIAL_SIZE)
         minimal = DICT_HT_INITIAL_SIZE;
+
+    // 调整大小
     return dictExpand(d, minimal);
 }
 
+/**
+ * 创建一个新的哈希表，根据字典当前状态选择不同的操作
+ * 
+ * T = O(n)
+ */
 /* Expand or create the hash table */
 int dictExpand(dict *d, unsigned long size)
 {
+    // 如果字典正在进行 rehash 或者 0 号哈希表已有节点数量大于 size 就返回
     /* the size is invalid if it is smaller than the number of
      * elements already inside the hash table */
     if (dictIsRehashing(d) || d->ht[0].used > size)
         return DICT_ERR;
 
     dictht n; /* the new hash table */
-    unsigned long realsize = _dictNextPower(size);
+    unsigned long realsize = _dictNextPower(size); // 计算哈希表的大小
 
+    // 如果哈希表的大小等于 0 号哈希表已有节点数量，说明是相同大小的哈希表，没有意义
     /* Rehashing to the same table size is not useful. */
     if (realsize == d->ht[0].size) return DICT_ERR;
 
+    // 给哈希表分配对应的内存空间
     /* Allocate the new hash table and initialize all pointers to NULL */
     n.size = realsize;
     n.sizemask = realsize-1;
     n.table = zcalloc(realsize*sizeof(dictEntry*));
     n.used = 0;
 
+    // 0 号哈希表等于 NULL，说明是初始化操作，将哈希表指向 0 号哈希表指针
     /* Is this the first initialization? If so it's not really a rehashing
      * we just set the first hash table so that it can accept keys. */
     if (d->ht[0].table == NULL) {
@@ -170,12 +210,18 @@ int dictExpand(dict *d, unsigned long size)
         return DICT_OK;
     }
 
+    // 说明是 rehash 操作，将 rehashidx 设置为 0，表示要开始 rehash 了
     /* Prepare a second hash table for incremental rehashing */
     d->ht[1] = n;
     d->rehashidx = 0;
     return DICT_OK;
 }
 
+/**
+ * 渐进式 rehash
+ * 
+ * T = O(n)
+ */
 /* Performs N steps of incremental rehashing. Returns 1 if there are still
  * keys to move from the old to the new hash table, otherwise 0 is returned.
  *
